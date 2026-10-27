@@ -59,6 +59,14 @@ export async function init(ctx){
   scene.traverse(o => { if (o.isMesh && o.material && o.material.isMeshPhysicalMaterial && o.material.transparent && o.material.opacity < .3) {
     const g = o.material; if (!g.__pt) { g.__pt = true; g.transparent = false; g.opacity = 1; g.transmission = 1; g.roughness = 0; g.thickness = 0; g.ior = 1.5; g.color.set(0xf4fbfb); } } });
 
+  // share identical materials (keeps the tracer's material ids in 8 bits and the material table small)
+  { const keyOf = mt => { const o = {t: mt.type}; for (const k of ['color','emissive','specularColor','sheenColor','attenuationColor']) if (mt[k]) o[k] = mt[k].getHexString();
+      for (const k of ['roughness','metalness','emissiveIntensity','opacity','transparent','transmission','ior','thickness','clearcoat','clearcoatRoughness','sheen','side','alphaTest','flatShading','vertexColors']) o[k] = mt[k];
+      for (const k of ['map','normalMap','roughnessMap','metalnessMap','emissiveMap','alphaMap','bumpMap','aoMap']) o[k] = mt[k] ? mt[k].uuid + (mt[k].repeat ? mt[k].repeat.x + ',' + mt[k].repeat.y + ',' + mt[k].offset.x + ',' + mt[k].offset.y + ',' + mt[k].rotation : '') : null;
+      return JSON.stringify(o); };
+    const pool = new Map(), f = mt => { const k = keyOf(mt); if (!pool.has(k)) pool.set(k, mt); return pool.get(k); };
+    scene.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(f) : f(o.material); });
+    console.log('materials', pool.size); }
   // sky: equirect gradient + soft sun glow (linear floats)
   function skyTex(key){
     const K = ctx.SKY[key], W = 512, Hh = 256, d = new Float32Array(W*Hh*4);
