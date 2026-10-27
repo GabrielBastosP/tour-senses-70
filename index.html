@@ -45,10 +45,23 @@ h1{font-family:var(--display);font-weight:500;font-size:26px;margin:2px 0 0;line
 #gal figcaption{font-size:13px;color:var(--muted);margin-top:6px}
 #gal-x{position:absolute;top:14px;right:16px;font:500 14px var(--ui);color:var(--ink);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
 .seg button:hover{background:rgba(255,255,255,.1)}.seg button[aria-pressed="true"]:hover{background:var(--ink)}
-@media (max-width:560px){
-  h1{font-size:21px}
-  #mini{width:104px;top:calc(64px + env(safe-area-inset-top,0px))} .sub{display:none}
-  #room{top:auto;bottom:calc(122px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px))}
+#menu-btn{display:none}
+.menu-label{display:none}
+@media (max-width:700px){
+  #menu-btn{display:grid;place-items:center;position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--ink);font:700 24px/1 var(--ui);letter-spacing:1px;z-index:6;cursor:pointer;padding:0}
+  #menu-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  #bar{display:none;flex-direction:column;align-items:stretch;gap:10px;background:rgba(18,19,23,.95);border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding:16px 16px calc(84px + env(safe-area-inset-bottom,0px));pointer-events:auto;z-index:5;max-height:78vh;overflow:auto}
+  body.menu-open #bar{display:flex}
+  #bar > *{width:100%}
+  #bar .seg button{flex:1;padding:10px 8px}
+  .rooms{flex-wrap:wrap;justify-content:center;border-radius:18px;overflow:visible}
+  .rooms button{padding:9px 12px}
+  .menu-label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:4px 2px -4px}
+  #room{top:auto;bottom:calc(26px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));right:auto;max-width:calc(100% - 100px);font-size:12.5px}
+  body.menu-open #room{display:none}
+  .card{padding:8px 12px} h1{font-size:19px} .eyebrow{font-size:10px} .sub{display:none}
+  #mini{width:96px;top:calc(14px + env(safe-area-inset-top,0px))}
+  #stick{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   #hint{display:none}
 }
 @media (prefers-reduced-motion:reduce){#hint,#loading{transition:none}}
@@ -67,12 +80,15 @@ h1{font-family:var(--display);font-weight:500;font-size:26px;margin:2px 0 0;line
   <div id="tip" hidden></div>
   <canvas id="mini" width="264" height="296" hidden aria-label="Mapa: toque para ir até lá"></canvas>
   <div id="stick" hidden><div id="knob"></div></div>
+  <button id="menu-btn" aria-label="Opções" aria-expanded="false" aria-controls="bar">•••</button>
   <nav id="bar">
+    <span class="menu-label">Vista</span>
     <div class="seg" role="group" aria-label="Vista">
       <button id="v-plan" aria-pressed="true">Planta 3D</button>
       <button id="v-facade" aria-pressed="false">Fachada</button>
       <button id="v-walk" aria-pressed="false">Caminhar</button>
     </div>
+    <span class="menu-label">Horário</span>
     <div class="seg" role="group" aria-label="Iluminação">
       <button data-light="manha" aria-pressed="true">Manhã</button>
       <button data-light="tarde" aria-pressed="false">Fim de tarde</button>
@@ -83,6 +99,7 @@ h1{font-family:var(--display);font-weight:500;font-size:26px;margin:2px 0 0;line
       <button id="l-all">Todas as luzes</button>
     </div>
     <div class="seg"><button id="b-ref">Perspectivas</button></div>
+    <span class="menu-label">Ir para</span>
     <div class="rooms" id="rooms" aria-label="Ir para"></div>
   </nav>
   <div id="gal" hidden>
@@ -1329,6 +1346,11 @@ ROOMS.filter(r => r.go).forEach(r => {
   const b = document.createElement('button'); b.textContent = r.n;
   b.onclick = () => goTo(r.go[0], r.go[1], r.go[2]); roomsEl.appendChild(b);
 });
+const menuBtn = document.getElementById('menu-btn');
+const setMenu = open => { document.body.classList.toggle('menu-open', open); menuBtn.setAttribute('aria-expanded', open); menuBtn.textContent = open ? '✕' : '•••'; };
+menuBtn.onclick = () => setMenu(!document.body.classList.contains('menu-open'));
+canvas.addEventListener('pointerdown', () => setMenu(false));
+document.getElementById('bar').addEventListener('click', e => { if (e.target.closest('#v-plan,#v-facade,#v-walk,#rooms button,#b-ref')) setMenu(false); });
 document.getElementById('v-plan').onclick = () => setMode('plan');
 document.getElementById('v-facade').onclick = () => setMode('facade');
 document.getElementById('v-walk').onclick = () => setMode('walk');
