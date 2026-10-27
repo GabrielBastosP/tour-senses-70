@@ -224,7 +224,7 @@ controls.minDistance = 3; controls.maxDistance = 26;
 
 const img = new Image();
 img.src = 'planta70.jpg';
-await img.decode().catch(() => {
+await (img.complete && img.naturalWidth ? Promise.resolve() : new Promise((res, rej) => { img.onload = res; img.onerror = rej; })).catch(() => {
   document.getElementById('loading').innerHTML = '<div id="err">Não consegui carregar a planta.</div>';
   throw new Error('plan image');
 });
@@ -2236,7 +2236,7 @@ renderer.setAnimationLoop(() => {
 const loading = document.getElementById('loading');
 loading.style.opacity = 0; setTimeout(() => loading.remove(), 600);
 { const q = new URLSearchParams(location.search);
-  if (q.has('render')) import('./render.js').then(R => R.init({THREE, scene, doorG, renderer, camera, m, LR, setLight, setMode, updateLights, sky, blocked, current, SKY, LIGHTS, light: q.get('light') || 'manha', skyGain: +(q.get('sky') || 1.6)})).catch(e => { document.body.insertAdjacentHTML('beforeend', '<pre style="position:fixed;top:0;left:0;color:#f88;z-index:99">' + e.stack + '</pre>'); }); }
+  if (q.has('render')) import('./render.js?v=' + (q.get('v') || 0)).then(R => R.init({THREE, scene, doorG, renderer, camera, m, LR, setLight, setMode, updateLights, sky, blocked, current, SKY, LIGHTS, light: q.get('light') || 'manha', skyGain: +(q.get('sky') || 1.6)})).catch(e => { document.body.insertAdjacentHTML('beforeend', '<pre style="position:fixed;top:0;left:0;color:#f88;z-index:99">' + e.stack + '</pre>'); }); }
 </script>
 
 </body></html>
