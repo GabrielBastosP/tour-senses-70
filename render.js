@@ -36,6 +36,7 @@ export async function init(ctx){
   const swaps = [];
   scene.traverse(o => {
     if (!o.isMesh) return;
+    o.geometry = o.geometry.clone();          // the tracer caches material ids on the geometry: never share it
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     if (mats.every(mt => mt.visible === false)) { o.visible = false; return; }
     if (o.material.isShaderMaterial) { o.visible = false; return; }
@@ -81,26 +82,31 @@ export async function init(ctx){
   for (const k of ['backgroundRotation', 'environmentRotation']) if (!(k in THREE.Scene.prototype)) THREE.Scene.prototype[k] = new THREE.Euler();
   const pt = new WebGLPathTracer(renderer);
   pt.renderDelay = 0; pt.fadeDuration = 0; pt.minSamples = 0; pt.dynamicLowRes = false; pt.rasterizeScene = false;
-  pt.bounces = 6; pt.transmissiveBounces = 6; pt.filterGlossyFactor = .5; pt.textureSize.set(2048, 2048);
+  pt.bounces = 5; pt.transmissiveBounces = 4; pt.filterGlossyFactor = .5; pt.textureSize.set(2048, 2048);
   pt.tiles.set(2, 2);
   const persp = new THREE.PerspectiveCamera(75, 1, .05, 800), eq = new EquirectCamera();
   log.textContent = 'building BVH…'; const frame0 = () => new Promise(r => setTimeout(r, 50));
   await frame0(); pt.setScene(scene, persp);
   log.textContent = 'ready';
 
-  const frame = () => new Promise(r => requestAnimationFrame(r));
+  // MessageChannel yields keep running when the pane is in the background (rAF is throttled there)
+  const frame = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });
+  const gl = renderer.getContext(), px = new Uint8Array(4);
   const pos = p => new THREE.Vector3(m(p.x), CAM_Y, m(p.z));
   let stop = false;
   async function accumulate(n){
     stop = false; const t0 = performance.now();
-    while (pt.samples < n && !stop) { pt.renderSample(); log.textContent = `${Math.floor(pt.samples)}/${n} · ${((performance.now()-t0)/1000).toFixed(0)}s`; await frame(); }
+    while (pt.samples < n && !stop) { for (let i = 0; i < 4; i++) pt.renderSample(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); RT.prog = Math.floor(pt.samples) + '/' + n; log.textContent = `${Math.floor(pt.samples)}/${n} · ${((performance.now()-t0)/1000).toFixed(0)}s`; await frame(); }
     pt.renderSample();
     return (performance.now() - t0)/1000;
   }
   function setSize(w, h){ renderer.setPixelRatio(1); renderer.setSize(w, h, false); }
+  function save(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  const grab = (type = 'image/png', q) => new Promise(r => { pt.renderSample(); cv.toBlob(r, type, q); });
   const RT = window.RT = {
     P, pt, scene, THREE,
     stop(){ stop = true; },
+    async snap(name){ const b = await grab('image/jpeg', .92); save(b, name); return b.size; },
     exposure(v){ renderer.toneMappingExposure = v; pt.reset(); },
     async preview(k, {yaw, pitch = 0, w = 1200, h = 800, samples = 64, fov = 75} = {}){
       const p = P[k]; setSize(w, h); persp.aspect = w/h; persp.fov = fov; persp.updateProjectionMatrix();
@@ -110,8 +116,8 @@ export async function init(ctx){
     async pano(k, {w = 4096, samples = 512, download = true, q = .9} = {}){
       const p = P[k]; setSize(w, w/2); eq.position.copy(pos(p)); eq.rotation.set(0, 0, 0); pt.setCamera(eq);
       const s = await accumulate(samples);
-      const blob = await new Promise(r => { pt.renderSample(); cv.toBlob(r, 'image/jpeg', q); });
-      if (download) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `pano-${k}.jpg`; document.body.appendChild(a); a.click(); a.remove(); }
+      const blob = await grab('image/png');
+      if (download) save(blob, `pano-${k}.png`);
       return {k, s: Math.round(s), size: blob.size};
     },
     async all(opts = {}, keys = Object.keys(P)){ const out = []; for (const k of keys) { if (stop) break; out.push(await RT.pano(k, opts)); } RT.done = out; return out; },
