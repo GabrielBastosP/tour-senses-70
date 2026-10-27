@@ -141,6 +141,35 @@ export async function init(ctx){
       if (download) save(blob, `pano-${k}.png`);
       return {k, s: Math.round(s), size: blob.size};
     },
+    // denoiser guides: albedo + world normals, same equirect mapping as the tracer (raw linear values in the PNG)
+    async aux(k, {w = 4096, download = true} = {}){
+      const p = P[k], cubeRT = new THREE.WebGLCubeRenderTarget(2048, {type: THREE.HalfFloatType}), cc = new THREE.CubeCamera(.03, 900, cubeRT);
+      cc.position.copy(pos(p)); scene.add(cc);
+      const nrm = new THREE.ShaderMaterial({side: THREE.DoubleSide, vertexShader: 'varying vec3 vN; void main(){ vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+        fragmentShader: 'varying vec3 vN; void main(){ vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; gl_FragColor = vec4(n * .5 + .5, 1.); }'});
+      const albCache = new Map(), alb = mt => { if (!albCache.has(mt)) { const em = mt.emissive && mt.emissiveIntensity > 0 && (mt.emissive.r + mt.emissive.g + mt.emissive.b) > 0;
+        const c = mt.color ? mt.color.clone() : new THREE.Color(1, 1, 1); if (em && c.r + c.g + c.b < .05) c.copy(mt.emissive);
+        albCache.set(mt, new THREE.MeshBasicMaterial({color: c, map: mt.map || (em ? mt.emissiveMap : null) || null, side: mt.side, transparent: mt.transparent, opacity: mt.opacity, alphaMap: mt.alphaMap || null, alphaTest: mt.alphaTest})); }
+        return albCache.get(mt); };
+      const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({uniforms: {cube: {value: cubeRT.texture}}, depthTest: false,
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+        fragmentShader: 'uniform samplerCube cube; varying vec2 vUv; void main(){ vec2 uv = vUv; uv.x -= .5; uv.y = 1. - uv.y; float th = uv.x * 6.2831853, ph = uv.y * 3.14159265; vec3 d = vec3(sin(ph) * cos(th), cos(ph), sin(ph) * sin(th)); gl_FragColor = vec4(textureCube(cube, vec3(-d.x, d.y, d.z)).rgb, 1.); }'}));
+      const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      const out = [];
+      for (const mode of ['alb', 'nrm']) {
+        const saved = []; scene.traverseVisible(o => { if (!o.isMesh || o === quad) return; saved.push([o, o.material]);
+          if (o.material.transmission > .5) { o.visible = false; return; } o.material = mode === 'alb' ? alb(o.material) : nrm; });
+        const bg = scene.background; scene.background = mode === 'alb' ? bg : new THREE.Color(.5, .5, .5);
+        const tm = renderer.toneMapping; renderer.toneMapping = THREE.NoToneMapping;
+        cc.update(renderer, scene);
+        saved.forEach(([o, mt]) => { o.material = mt; o.visible = true; }); scene.background = bg;
+        setSize(w, w/2); renderer.setRenderTarget(null);
+        const blob = await new Promise(r => { renderer.render(qs, qc); cv.toBlob(r, 'image/png'); });
+        renderer.toneMapping = tm;
+        if (download) save(blob, `pano-${k}-${mode}.png`); out.push(blob.size);
+      }
+      scene.remove(cc); cubeRT.dispose(); pt.reset(); return out;
+    },
     async all(opts = {}, keys = Object.keys(P)){ const out = []; for (const k of keys) { if (stop) break; out.push(await RT.pano(k, opts)); } RT.done = out; return out; },
     // which points can see each other (for hotspot links)
     links(maxD = 7){
