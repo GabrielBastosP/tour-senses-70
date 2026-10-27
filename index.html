@@ -2219,6 +2219,10 @@ mini.addEventListener('pointerdown', e => {
 });
 
 setLight('manha'); setMode('plan'); resize();
+{ const q = new URLSearchParams(location.search), v = q.get('v');               // links back from the 360° tour
+  if (v === 'facade' || v === 'walk') setMode(v);
+  if (v === 'walk') goTo(1400, 1450, 1.35);
+  if (q.has('lift')) { switchScene(MAIN); setMode('walk'); openLift(); } }
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), .05);
