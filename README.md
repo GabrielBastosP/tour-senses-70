@@ -9,6 +9,10 @@ Tour interativo do apartamento tipo 70 m² do Senses (Av. Andrômeda, 867 · Jar
 - **Todas as plantas e áreas comuns mobiliadas em 3D** (móveis, luzes por ambiente, cortinas, porta e hall do elevador), a partir das plantas humanizadas e da implantação, com as perspectivas nos pontos de interesse.
 - Iluminação de manhã, fim de tarde e noite.
 
-Abra o `index.html` pelo GitHub Pages para navegar.
+- **Tour 360° renderizado** (`tour360.html`): 11 panoramas fotorrealistas em 4K, renderizados por traçado de raios (path tracing) a partir do mesmo modelo, com navegação por pontos, planta com posição e giroscópio no celular.
+
+Abra o `index.html` (tour 3D) ou o `tour360.html` (tour 360°) pelo GitHub Pages.
+
+Para renderizar de novo: abra `index.html?render=1` num navegador com placa de vídeo e rode `RT.batch()` no console; os panoramas e os guias de albedo/normal são baixados e depois passam pelo denoiser (Intel Open Image Denoise).
 
 Imagens de referência e planta: material de divulgação do empreendimento. Entorno: dados © colaboradores do OpenStreetMap (ODbL). Modelo 3D ilustrativo, sem valor de projeto.
