@@ -14,7 +14,7 @@
   --display:"Bodoni Moda",Georgia,serif; --ui:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui)}
+html,body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font-family:var(--ui)}
 a{color:inherit}
 img{display:block;max-width:100%}
 
@@ -24,10 +24,10 @@ img{display:block;max-width:100%}
 .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,12,.72) 0%,rgba(20,16,12,.5) 45%,rgba(20,16,12,.82) 100%)}
 @keyframes drift{to{transform:scale(1.14) translate(-1.5%,-1%)}}
 @media (prefers-reduced-motion:reduce){.cover .bg{animation:none}}
-.cover .in{position:relative;z-index:1;max-width:860px}
+.cover .in{position:relative;z-index:1;width:100%;max-width:860px;min-width:0}
 .logo{width:min(380px,74vw);margin:0 auto;opacity:0;animation:up .9s .1s ease-out forwards}
 .pres{font:italic 400 clamp(20px,3vw,28px)/1 var(--display);color:#e8d3b4;margin:30px 0 6px;letter-spacing:.02em;opacity:0;animation:up .9s .35s ease-out forwards}
-h1{font:500 clamp(46px,9vw,104px)/.95 var(--display);margin:0;letter-spacing:-.01em;opacity:0;animation:up .9s .5s ease-out forwards}
+h1{font:500 clamp(30px,9.6vw,104px)/.95 var(--display);margin:0;letter-spacing:-.01em;opacity:0;animation:up .9s .5s ease-out forwards}
 .rule{width:64px;height:2px;background:var(--gold);margin:26px auto 18px;opacity:0;animation:up .9s .65s ease-out forwards}
 .lede{font-size:clamp(15px,1.8vw,17px);line-height:1.55;color:#e9e3da;max-width:540px;margin:0 auto;opacity:0;animation:up .9s .75s ease-out forwards}
 @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -82,7 +82,7 @@ footer img{width:110px}
   .facts b{font-size:18px}
   .list{padding-top:56px}
 }
-@media (max-width:420px){ .ctas .btn{flex:1;justify-content:center} }
+@media (max-width:420px){ .lede{font-size:15px} .logo{width:68vw} .pres{margin-top:22px} h1{letter-spacing:-.02em} .ctas .btn{flex:1;justify-content:center} }
 </style></head>
 <body>
 
