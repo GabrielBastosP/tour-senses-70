@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Senses 70 m² · Tour 360°</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Full-bleed rendered panorama; one dark glass layer of controls on top, same look as the 3D tour */
+:root{
+  --ink:#f3efe8; --muted:#b9b2a6; --glass:rgba(22,22,26,.72); --line:rgba(255,255,255,.14);
+  --accent:#d39a6a; --bg:#121317;
+  --display:"Bodoni Moda",Georgia,"Times New Roman",serif;
+  --ui:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}
+canvas#c.drag{cursor:grabbing}
+.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.card{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));border-radius:10px;padding:12px 16px;max-width:calc(100% - 32px)}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:500;font-size:26px;margin:2px 0 0;line-height:1.1}
+.sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.sub a{color:var(--accent);text-decoration:none}
+#here{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));border-radius:999px;padding:8px 14px;font-size:13px;display:flex;gap:8px;align-items:center}
+#here b{color:var(--accent);font-weight:600}
+#tools{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:calc(62px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:8px}
+.icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--ink);cursor:pointer;padding:0;font:600 15px var(--ui)}
+.icon svg{width:19px;height:19px}
+.icon[aria-pressed="true"]{background:var(--ink);color:#1a1a1e}
+.icon:focus-visible,.rooms button:focus-visible,.spot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#mini{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:236px;border-radius:10px;padding:8px}
+#mini canvas{display:block;width:100%;height:auto;border-radius:6px;cursor:pointer}
+#mini .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:2px 2px 6px}
+.rooms{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:4px;overflow-x:auto;max-width:calc(100% - 32px);border-radius:999px;padding:4px;scrollbar-width:none}
+.rooms::-webkit-scrollbar{display:none}
+.rooms button{font:500 13px var(--ui);color:var(--ink);background:transparent;border:0;border-radius:999px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+.rooms button[aria-current="true"]{background:var(--ink);color:#1a1a1e}
+#spots{position:fixed;inset:0;pointer-events:none}
+.spot{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:none;padding:0;cursor:pointer;color:var(--ink);transform-origin:50% 50%}
+.spot .ring{display:block;width:var(--s,54px);height:calc(var(--s,54px)*.42);border-radius:50%;border:2.5px solid rgba(255,255,255,.92);background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(0,0,0,.15),0 6px 18px rgba(0,0,0,.25);margin:0 auto;transition:background .2s,transform .2s}
+.spot .lab{display:block;margin-top:6px;font:600 12.5px var(--ui);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;text-align:center;opacity:.95}
+.spot:hover .ring{background:rgba(211,154,106,.55);transform:scale(1.08)}
+#hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(72px + env(safe-area-inset-bottom,0px));font-size:12.5px;background:rgba(0,0,0,.45);padding:6px 12px;border-radius:999px;white-space:nowrap;transition:opacity .5s;pointer-events:none}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);transition:opacity .6s;z-index:9}
+#load div{text-align:center}
+#load .bar{width:180px;height:3px;background:rgba(255,255,255,.12);border-radius:3px;margin:14px auto 0;overflow:hidden}
+#load .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+@media (max-width:700px){
+  h1{font-size:21px}
+  .card{padding:10px 12px;max-width:calc(100% - 92px)}
+  .sub{display:none}
+  #mini{width:150px;bottom:calc(70px + env(safe-area-inset-bottom,0px));padding:6px}
+  #mini .t{display:none}
+  #here{top:auto;bottom:calc(70px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px))}
+  #hint{display:none}
+}
+</style></head>
+<body>
+<canvas id="c"></canvas>
+<div id="spots"></div>
+<div class="card glass">
+  <div class="eyebrow">Senses Jardim Satélite</div>
+  <h1>Tipo 70 m² · 360°</h1>
+  <div class="sub">2 dormitórios · suíte · gourmet integrado · <a href="index.html">tour 3D interativo</a></div>
+</div>
+<div id="here" class="glass"><span>Você está em</span><b id="here-n">Living</b></div>
+<div id="tools">
+  <button class="icon glass" id="b-rot" aria-pressed="true" title="Girar automaticamente" aria-label="Girar automaticamente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></button>
+  <button class="icon glass" id="b-full" title="Tela cheia" aria-label="Tela cheia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button class="icon glass" id="b-gyro" aria-pressed="false" title="Mover o celular para olhar" aria-label="Mover o celular para olhar" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></svg></button>
+</div>
+<div id="mini" class="glass"><div class="t">Planta · toque para ir</div><canvas id="map" width="472" height="420"></canvas></div>
+<nav class="rooms glass" id="rooms" aria-label="Ambientes"></nav>
+<div id="hint">Arraste para olhar · role para aproximar · toque nos círculos do piso para andar</div>
+<div id="load"><div><div class="eyebrow">Senses · Tipo 70 m²</div><div style="font-family:var(--display);font-size:24px;margin-top:4px">Carregando o tour 360°</div><div class="bar"><i id="load-bar"></i></div></div></div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// Capture points in plan pixels of planta70.jpg (168 px = 1 m); links = the circles shown on the floor.
+const S = 168, CAM_Y = 1.45;
+const P = {
+  hall:    {n: 'Hall do elevador', x: 1800, z: 1395, yaw: 1.57,  links: ['living']},
+  living:  {n: 'Living',           x: 1340, z: 1160, yaw: 2.6,   links: ['hall', 'cozinha', 'jantar', 'circ']},
+  cozinha: {n: 'Cozinha',          x: 1230, z: 1460, yaw: 1.57,  links: ['living', 'jantar', 'circ']},
+  jantar:  {n: 'Jantar e gourmet', x: 900,  z: 1470, yaw: -1.57, links: ['cozinha', 'living', 'varanda', 'servico']},
+  varanda: {n: 'Gourmet',          x: 400,  z: 1210, yaw: 0,     links: ['jantar', 'servico']},
+  servico: {n: 'Área de serviço',  x: 640,  z: 1085, yaw: 0,     links: ['jantar', 'varanda']},
+  circ:    {n: 'Circulação',       x: 1100, z: 760,  yaw: 0,     links: ['living', 'cozinha', 'suite', 'quarto', 'banho']},
+  suite:   {n: 'Suíte',            x: 760,  z: 590,  yaw: .35,   links: ['circ', 'banhoS']},
+  banhoS:  {n: 'Banho da suíte',   x: 430,  z: 790,  yaw: 0,     links: ['suite']},
+  quarto:  {n: 'Quarto',           x: 1290, z: 610,  yaw: -.2,   links: ['circ']},
+  banho:   {n: 'Banho social',     x: 1100, z: 470,  yaw: 0,     links: ['circ']},
+};
+const ORDER = ['hall', 'living', 'cozinha', 'jantar', 'varanda', 'servico', 'circ', 'suite', 'banhoS', 'quarto', 'banho'];
+const keys = Object.keys(P).filter(k => window.PANOS ? window.PANOS.includes(k) : true);
+const W = k => new THREE.Vector3(P[k].x / S, CAM_Y, P[k].z / S);
+
+// ---------- renderer: a full-screen quad that looks up the equirect exactly like the path tracer wrote it ----------
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias: false});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const camera = new THREE.PerspectiveCamera(75, 1, .1, 100); camera.rotation.order = 'YXZ';
+const mat = new THREE.ShaderMaterial({
+  uniforms: {a: {value: null}, b: {value: null}, mixv: {value: 0}, invProj: {value: new THREE.Matrix4()}, camRot: {value: new THREE.Matrix3()},
+             offA: {value: new THREE.Vector3()}, offB: {value: new THREE.Vector3()}},
+  vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = vec4(position.xy, 0., 1.); }',
+  fragmentShader: `
+    uniform sampler2D a, b; uniform float mixv; uniform mat4 invProj; uniform mat3 camRot; uniform vec3 offA, offB; varying vec2 vP;
+    const float PI = 3.14159265;
+    vec2 eq(vec3 d){ d = normalize(d); return vec2(atan(d.z, d.x) / (2. * PI) + .5, 1. - acos(clamp(d.y, -1., 1.)) / PI); }
+    void main(){
+      vec4 v = invProj * vec4(vP, 1., 1.); vec3 d = normalize(camRot * (v.xyz / v.w));
+      // during a move, each pano is re-projected about a point 2.5 m ahead so the room appears to slide past
+      vec3 da = d * 2.5 - offA, db = d * 2.5 - offB;
+      vec4 ca = texture2D(a, eq(da)); vec4 cb = texture2D(b, eq(db));
+      gl_FragColor = mix(ca, cb, mixv);
+      #include <colorspace_fragment>
+    }`,
+  depthTest: false, depthWrite: false,
+});
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false;
+const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+// ---------- textures: small first for an instant start, then the full 4K image ----------
+const loader = new THREE.TextureLoader(), cache = {};
+function setup(t){ t.colorSpace = THREE.SRGBColorSpace; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.wrapS = THREE.RepeatWrapping; return t; }
+function load(url){ return new Promise((res, rej) => loader.load(url, t => res(setup(t)), undefined, rej)); }
+function pano(k){
+  if (!cache[k]) {
+    const e = cache[k] = {k, tex: null};
+    e.small = load(`pano/${k}-s.jpg`).then(t => { if (!e.full) e.tex = t; return t; });
+    e.big = () => e.bigP || (e.bigP = load(`pano/${k}.jpg`).then(t => { e.full = true; e.tex = t; return t; }));
+  }
+  return cache[k];
+}
+
+// ---------- state + input ----------
+const view = {yaw: P.living.yaw, pitch: -.08, fov: 75, vy: 0, vp: 0};
+let cur = keys.includes('living') ? 'living' : keys[0], auto = true, idleT = 0, moving = null;
+const rotBtn = document.getElementById('b-rot');
+rotBtn.onclick = () => { auto = !auto; rotBtn.setAttribute('aria-pressed', auto); idleT = 0; };
+document.getElementById('b-full').onclick = () => { const d = document; if (!d.fullscreenElement) (d.documentElement.requestFullscreen || d.documentElement.webkitRequestFullscreen)?.call(d.documentElement); else d.exitFullscreen(); };
+
+let drag = null; const pts = new Map();
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x: e.clientX, y: e.clientY}); drag = {x: e.clientX, y: e.clientY, t: performance.now(), moved: 0}; canvas.classList.add('drag'); stopAuto(); });
+canvas.addEventListener('pointermove', e => {
+  if (!pts.has(e.pointerId)) return;
+  const prev = pts.get(e.pointerId);
+  if (pts.size === 2) {                      // pinch zoom
+    const [p1, p2] = [...pts.values()], d0 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    const [q1, q2] = [...pts.values()], d1 = Math.hypot(q1.x - q2.x, q1.y - q2.y);
+    if (d0 > 0) view.fov = Math.max(35, Math.min(95, view.fov * d0 / d1)); return;
+  }
+  const k = view.fov / 75 * (e.pointerType === 'touch' ? .0042 : .0032);
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  view.yaw += dx * k; view.pitch = Math.max(-1.4, Math.min(1.4, view.pitch + dy * k));
+  view.vy = dx * k; view.vp = dy * k; drag.moved += Math.abs(dx) + Math.abs(dy);
+  pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
+});
+const up = e => { pts.delete(e.pointerId); if (!pts.size) { canvas.classList.remove('drag');
+  if (drag && drag.moved < 6 && performance.now() - drag.t < 350) clickFloor(e.clientX, e.clientY); drag = null; } };
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+canvas.addEventListener('wheel', e => { e.preventDefault(); view.fov = Math.max(35, Math.min(95, view.fov * Math.exp(e.deltaY * .0012))); stopAuto(); }, {passive: false});
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') view.yaw += .12; if (e.key === 'ArrowRight') view.yaw -= .12;
+  if (e.key === 'ArrowUp') view.pitch = Math.min(1.4, view.pitch + .1); if (e.key === 'ArrowDown') view.pitch = Math.max(-1.4, view.pitch - .1);
+  if (e.key.startsWith('Arrow')) stopAuto();
+});
+function stopAuto(){ idleT = 0; }
+
+// device orientation (phones): look around by moving the phone
+const gyroBtn = document.getElementById('b-gyro'); let gyro = null, gyroBase = null;
+if (typeof DeviceOrientationEvent !== 'undefined' && matchMedia('(pointer:coarse)').matches) gyroBtn.hidden = false;
+gyroBtn.onclick = async () => {
+  if (gyro) { removeEventListener('deviceorientation', gyro); gyro = null; gyroBtn.setAttribute('aria-pressed', false); return; }
+  try { if (DeviceOrientationEvent.requestPermission && await DeviceOrientationEvent.requestPermission() !== 'granted') return; } catch (_) { return; }
+  gyroBase = null;
+  gyro = e => { if (e.alpha == null) return; const yaw = THREE.MathUtils.degToRad(e.alpha), pit = THREE.MathUtils.degToRad((e.beta || 90) - 90);
+    if (!gyroBase) gyroBase = {yaw: yaw - view.yaw}; view.yaw = yaw - gyroBase.yaw; view.pitch = Math.max(-1.4, Math.min(1.4, pit)); idleT = 0; };
+  addEventListener('deviceorientation', gyro); gyroBtn.setAttribute('aria-pressed', true); auto = false; rotBtn.setAttribute('aria-pressed', false);
+};
+
+// ---------- hotspots on the floor ----------
+const spotsEl = document.getElementById('spots'); let spotEls = [];
+function buildSpots(){
+  spotsEl.innerHTML = ''; spotEls = [];
+  for (const k of P[cur].links.filter(l => keys.includes(l))) {
+    const b = document.createElement('button'); b.className = 'spot'; b.setAttribute('aria-label', 'Ir para ' + P[k].n);
+    b.innerHTML = `<span class="ring"></span><span class="lab">${P[k].n}</span>`; b.onclick = () => go(k);
+    spotsEl.appendChild(b); spotEls.push({k, el: b});
+  }
+}
+const tmp = new THREE.Vector3();
+function placeSpots(){
+  const here = W(cur), w = innerWidth, h = innerHeight;
+  for (const s of spotEls) {
+    const t = W(s.k), dir = t.clone().sub(here); const dist = Math.hypot(dir.x, dir.z);
+    // ring sits on the floor, at most 3.2 m away along the line to the next point
+    const f = Math.min(1, 3.2 / dist); tmp.set(here.x + dir.x * f, 0, here.z + dir.z * f);
+    const v = tmp.clone().sub(here); v.applyEuler(new THREE.Euler(0, 0, 0)); tmp.project(camera);
+    const vis = tmp.z < 1 && Math.abs(tmp.x) < 1.2 && Math.abs(tmp.y) < 1.2;
+    s.el.style.display = vis ? '' : 'none'; if (!vis) continue;
+    const sc = Math.max(.55, Math.min(1.35, 2.2 / Math.min(dist, 3.2))) * (75 / view.fov);
+    s.el.style.transform = `translate(${(tmp.x + 1) / 2 * w}px, ${(1 - tmp.y) / 2 * h}px) translate(-50%, -20%) scale(${sc.toFixed(3)})`;
+  }
+}
+function clickFloor(x, y){
+  // a click anywhere on the floor goes to the linked point closest to that direction
+  const ndc = new THREE.Vector3(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1, .5).unproject(camera).sub(camera.position).normalize();
+  if (ndc.y > -.15) return;
+  const here = W(cur); const hit = here.clone().add(ndc.multiplyScalar(CAM_Y / -ndc.y));
+  let best = null, bd = 1e9;
+  for (const k of P[cur].links.filter(l => keys.includes(l))) { const t = W(k), a = Math.atan2(t.z - here.z, t.x - here.x), b = Math.atan2(hit.z - here.z, hit.x - here.x);
+    let da = Math.abs(a - b); da = Math.min(da, Math.PI * 2 - da); if (da < .5 && da < bd) { bd = da; best = k; } }
+  if (best) go(best);
+}
+
+// ---------- minimap ----------
+const map = document.getElementById('map'), mx = map.getContext('2d');
+const MX0 = 295, MY0 = 157, MW = 1680, MH = 1498; const plan = new Image(); plan.src = 'planta70.jpg';
+const mk = map.width / MW;
+function drawMap(){
+  mx.fillStyle = '#e9e4da'; mx.fillRect(0, 0, map.width, map.height);
+  if (plan.complete && plan.naturalWidth) mx.drawImage(plan, MX0, MY0, MW, MH, 0, 0, map.width, map.height);
+  for (const k of keys) { const x = (P[k].x - MX0) * mk, y = (P[k].z - MY0) * mk;
+    mx.beginPath(); mx.arc(x, y, k === cur ? 9 : 7, 0, 7); mx.fillStyle = k === cur ? '#d39a6a' : 'rgba(26,26,30,.78)'; mx.fill(); mx.lineWidth = 2.5; mx.strokeStyle = '#fff'; mx.stroke(); }
+  const x = (P[cur].x - MX0) * mk, y = (P[cur].z - MY0) * mk;
+  const fwd = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, view.yaw, 0, 'YXZ')), a = Math.atan2(fwd.z, fwd.x), half = THREE.MathUtils.degToRad(view.fov * .6);
+  mx.beginPath(); mx.moveTo(x, y); mx.arc(x, y, 46, a - half, a + half); mx.closePath(); mx.fillStyle = 'rgba(211,154,106,.38)'; mx.fill();
+}
+map.addEventListener('pointerdown', e => { e.stopPropagation(); const r = map.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * MW + MX0, pz = (e.clientY - r.top) / r.height * MH + MY0;
+  let best = null, bd = 1e9; for (const k of keys) { const d = Math.hypot(P[k].x - px, P[k].z - pz); if (d < bd) { bd = d; best = k; } }
+  if (best && best !== cur && bd < 260) go(best, true); });
+
+// ---------- room bar ----------
+const roomsEl = document.getElementById('rooms');
+ORDER.filter(k => keys.includes(k)).forEach(k => { const b = document.createElement('button'); b.textContent = P[k].n; b.dataset.k = k; b.onclick = () => go(k, true); roomsEl.appendChild(b); });
+function markRoom(){ roomsEl.querySelectorAll('button').forEach(b => { const on = b.dataset.k === cur; b.setAttribute('aria-current', on); if (on) b.scrollIntoView({block: 'nearest', inline: 'center', behavior: 'smooth'}); });
+  document.getElementById('here-n').textContent = P[cur].n; history.replaceState(null, '', '#' + cur); }
+
+// ---------- moving between points ----------
+async function go(k, jump = false){
+  if (moving || k === cur) return; stopAuto();
+  const from = cur, e = pano(k); const t = await e.small;
+  const here = W(from), there = W(k), d = there.clone().sub(here), dist = d.length();
+  const dirN = d.clone().normalize();
+  moving = {t0: performance.now(), dur: jump ? 650 : 900, from, k, dir: dirN, dist: Math.min(dist, 2.2), jump, fov0: view.fov,
+    aTex: cache[from].tex, bTex: e.tex || t};
+  // turn toward the destination while walking (not on a menu jump)
+  if (!jump) { const tgtYaw = Math.atan2(-dirN.x, -dirN.z); let dy = tgtYaw - view.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); if (Math.abs(dy) > .9) moving.turn = 0; else moving.turn = dy; }
+  cur = k; buildSpots(); markRoom(); e.big().then(() => {}); P[k].links.forEach(l => keys.includes(l) && pano(l));
+}
+
+// ---------- loop ----------
+function resize(){ renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+const clock = new THREE.Clock();
+function frame(){
+  const dt = Math.min(clock.getDelta(), .05);
+  idleT += dt;
+  if (!drag && !gyro) { view.yaw += view.vy; view.pitch = Math.max(-1.4, Math.min(1.4, view.pitch + view.vp)); view.vy *= .9; view.vp *= .9;
+    if (auto && idleT > 4 && !moving) view.yaw += dt * .05 * Math.min(1, (idleT - 4) / 2); }
+  let mixv = 0; const offA = mat.uniforms.offA.value.set(0, 0, 0), offB = mat.uniforms.offB.value.set(0, 0, 0);
+  if (moving) {
+    const m = moving, u = Math.min(1, (performance.now() - m.t0) / m.dur), s = u * u * (3 - 2 * u);
+    if (m.turn) view.yaw += m.turn * (s - (m.ls || 0)); m.ls = s;
+    mixv = THREE.MathUtils.smoothstep(u, .25, .85);
+    if (!m.jump) { offA.copy(m.dir).multiplyScalar(m.dist * s * .55); offB.copy(m.dir).multiplyScalar(-m.dist * (1 - s) * .55); }
+    else view.fov = m.fov0 * (1 - .12 * Math.sin(u * Math.PI));
+    mat.uniforms.a.value = m.aTex; mat.uniforms.b.value = cache[m.k].tex || m.bTex;
+    if (u >= 1) { moving = null; if (m.jump) view.fov = m.fov0; }
+  } else { mat.uniforms.a.value = cache[cur] && cache[cur].tex; mat.uniforms.b.value = mat.uniforms.a.value; }
+  mat.uniforms.mixv.value = mixv;
+  camera.fov = view.fov; camera.updateProjectionMatrix(); camera.rotation.set(view.pitch, view.yaw, 0); camera.position.copy(W(cur)); camera.updateMatrixWorld();
+  mat.uniforms.invProj.value.copy(camera.projectionMatrixInverse); mat.uniforms.camRot.value.setFromMatrix4(camera.matrixWorld);
+  if (mat.uniforms.a.value) renderer.render(qs, qc);
+  placeSpots(); spotsEl.style.opacity = moving ? 0 : 1; drawMap();
+  requestAnimationFrame(frame);
+}
+
+// ---------- start ----------
+const start = location.hash.slice(1); if (keys.includes(start)) cur = start;
+view.yaw = P[cur].yaw;
+const bar = document.getElementById('load-bar');
+let n = 0; const first = pano(cur);
+first.small.catch(() => {}).finally(() => {
+  bar.style.width = '100%'; const l = document.getElementById('load'); l.style.opacity = 0; setTimeout(() => l.remove(), 700);
+  first.big().catch(() => {}).finally(() => P[cur].links.forEach(l => keys.includes(l) && pano(l)));
+});
+buildSpots(); markRoom(); requestAnimationFrame(frame);
+setTimeout(() => document.getElementById('hint').style.opacity = 0, 8000);
+</script>
+</body></html>

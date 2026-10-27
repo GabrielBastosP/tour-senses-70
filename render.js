@@ -156,7 +156,7 @@ export async function init(ctx){
         return albCache.get(mt); };
       const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({uniforms: {cube: {value: cubeRT.texture}}, depthTest: false,
         vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
-        fragmentShader: 'uniform samplerCube cube; varying vec2 vUv; void main(){ vec2 uv = vUv; uv.x -= .5; uv.y = 1. - uv.y; float th = uv.x * 6.2831853, ph = uv.y * 3.14159265; vec3 d = vec3(sin(ph) * cos(th), cos(ph), sin(ph) * sin(th)); gl_FragColor = vec4(textureCube(cube, vec3(-d.x, d.y, d.z)).rgb, 1.); }'}));
+        fragmentShader: 'uniform samplerCube cube; varying vec2 vUv; void main(){ vec2 uv = vUv; uv.x -= .5; uv.y = 1. - uv.y; float th = uv.x * 6.2831853, ph = uv.y * 3.14159265; vec3 d = vec3(sin(ph) * cos(th), cos(ph), sin(ph) * sin(th)); gl_FragColor = vec4(textureCube(cube, d).rgb, 1.); }'}));
       const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       const out = [];
       for (const mode of ['alb', 'nrm']) {
@@ -172,6 +172,14 @@ export async function init(ctx){
         if (download) save(blob, `pano-${k}-${mode}.png`); out.push(blob.size);
       }
       scene.remove(cc); cubeRT.dispose(); pt.reset(); return out;
+    },
+    // full job: guides + beauty for each point, downloads land in the browser's download folder
+    async batch(keys = Object.keys(P), {w = 4096, samples = 160} = {}){
+      RT.status = []; stop = false;
+      for (const k of keys) { if (stop) break; const t0 = performance.now(); RT.cur = k;
+        await RT.aux(k, {w}); const r = await RT.pano(k, {w, samples});
+        RT.status.push({k, s: Math.round((performance.now() - t0)/1000), size: r.size}); }
+      RT.cur = null; return RT.status;
     },
     async all(opts = {}, keys = Object.keys(P)){ const out = []; for (const k of keys) { if (stop) break; out.push(await RT.pano(k, opts)); } RT.done = out; return out; },
     // which points can see each other (for hotspot links)
