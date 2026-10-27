@@ -145,7 +145,7 @@ const WALLS = [
 const WINDOWS = [
   [[1040,157,1140,185],1.6],[[1310,157,1515,185],0.9],
   [[295,340,322,590],0.9],[[295,690,322,820],1.6],[[295,945,322,1140],0.9],
-  [[295,1140,322,1630],0.0],[[1605,1290,1635,1440],0.9],
+  [[295,1140,322,1630],0.0],
 ];
 const DOORS = [[1040,590,1160,610],[1180,635,1200,755],[715,690,735,770],[1000,640,1020,755]];
 // footprints (plan px) of furniture you can't walk through
@@ -156,13 +156,14 @@ const COLL = [
   [735,805,1000,900],[598,815,715,900],[500,800,565,870],[466,675,474,880],
   [950,490,1030,590],[975,365,1055,430],[945,331,1170,339],
   [1435,190,1600,500],[1390,200,1430,260],[1205,190,1300,530],[1500,520,1600,768],[1335,670,1500,768],
-  [1445,890,1595,1575],[1185,800,1270,895],[1320,800,1410,895],[1450,800,1565,870],
+  [1445,890,1595,1275],[1185,800,1270,895],[1320,800,1410,895],[1450,800,1565,870],
   [1290,1090,1375,1140],[1260,1015,1330,1085],[1025,870,1085,1140],[1025,1270,1335,1370],
   [430,1255,830,1405],...N_CHAIRS,...S_CHAIRS,
   [322,1520,1410,1625],[1410,1500,1555,1625],
   [510,930,735,1030],[735,930,905,1030],[905,925,1000,1115],[345,950,410,1105],
 ];
 const ROOMS = [
+  {n:'Hall de entrada',d:'elevador · porta do apartamento',r:[1635,1180,1955,1600],go:[1880,1365,Math.PI/2]},
   {n:'Suíte',d:'3,65 × 2,77 m',r:[322,185,1000,655],go:[760,580,.35]},
   {n:'Banho suíte',d:'2,33 × 1,33 m',r:[322,675,715,900]},
   {n:'Closet',d:'1,59 × 1,76 m',r:[735,675,1000,900]},
@@ -463,7 +464,7 @@ place([1300,280,1360,360], 'W', g => {
 place([1500,520,1600,768], 'W', (g, w, d) => wardrobe(g, w, d, 2.4, M.oakV));
 place([1335,670,1500,768], 'N', (g, w, d) => wardrobe(g, w, d, 2.4, M.oakV));
 // living
-place([1445,890,1595,1575], 'W', sofa);
+place([1445,890,1595,1275], 'W', sofa);
 place([1185,800,1270,895], 'S', armchair);
 place([1320,800,1410,895], 'S', armchair);
 place([1450,800,1565,870], 'S', (g, w, d) => { B(g, w, .55, d, M.walnut); plant(g, 0, .55, 0, 1.3); });
@@ -569,7 +570,7 @@ const walkOnly = new THREE.Group(); walkOnly.visible = false; apt.add(walkOnly);
     const me = new THREE.Mesh(new THREE.BoxGeometry(w, 2.45, d), mt); me.position.set(m(r[0]) + w/2, 1.26, m(r[1]) + d/2); walkOnly.add(me);
     const rod = new THREE.Mesh(new THREE.BoxGeometry(w + .02, .02, d + .02), M.brass); rod.position.set(m(r[0]) + w/2, 2.5, m(r[1]) + d/2); walkOnly.add(rod);
   };
-  curtain([324,320,336,610]); curtain([1590,1270,1602,1460]); curtain([1290,187,1535,199]);
+  curtain([324,320,336,610]); curtain([1290,187,1535,199]);
   curtain([324,1150,336,1380]); curtain([324,1400,336,1620]);
 }
 // bathrooms: travertine cladding on the inside faces, leaving doors and windows open
@@ -639,6 +640,7 @@ const pickables = [];
 const hitMat = new THREE.MeshBasicMaterial({visible:false});
 // spots/strips in plan px; sw = [x, z, wall normal] where the plate sits; I = point-light strength
 const LR = [
+  {id:'Hall de entrada', I:6, pl:[[1795,1370]], spots:[[1795,1260],[1795,1480]], strips:[], sw:[1635,1470,'E']},
   {id:'Suíte', I:9, pl:[[600,400]], spots:[[450,270],[620,270],[450,470],[620,470],[540,610],[880,600]], strips:[[326,190,334,650]], sw:[1000,625,'W']},
   {id:'Banho suíte', I:6, pl:[[520,790]], spots:[[400,790],[600,790]], strips:[], sw:[715,785,'W']},
   {id:'Closet', I:6, pl:[[870,770]], spots:[[820,740],[920,740]], strips:[[740,680,996,686]], sw:[1000,785,'W']},
@@ -687,6 +689,64 @@ function updateLights(dt){
   M.shadeS.emissiveIntensity = LRid['Suíte'].v*1.4; M.shadeQ.emissiveIntensity = LRid['Quarto'].v*1.4; M.shadeG.emissiveIntensity = LRid['Gourmet e jantar'].v*1.3;
 }
 
+// ---------- entrance: front door on the living's east wall (as on the plan) and the floor's lift hall outside ----------
+let doorOpen = false;
+block([1605,1290,1635,1440], 2.1, H, wallMat, wallTop);                         // lintel over the door
+const doorG = new THREE.Group(); doorG.position.set(m(1620), 0, m(1293)); apt.add(doorG);
+{
+  const leaf = new THREE.Mesh(new THREE.BoxGeometry(.045, 2.08, m(144)), M.oakV); leaf.position.set(0, 1.04, m(72)); leaf.castShadow = true; doorG.add(leaf);
+  for (const sd of [-1, 1]){                                                     // lever handles on both faces
+    const rose = new THREE.Mesh(new THREE.CylinderGeometry(.028, .028, .012, 20), M.brass); rose.rotation.z = Math.PI/2; rose.position.set(sd*.03, 1.02, m(144) - .07); doorG.add(rose);
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(.02, .02, .14), M.brass); lever.position.set(sd*.05, 1.02, m(144) - .12); doorG.add(lever);
+  }
+  const eye = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .05, 10), M.brass); eye.rotation.z = Math.PI/2; eye.position.set(0, 1.55, m(72)); doorG.add(eye);
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(.4, 2.1, m(150)), hitMat); hit.position.set(0, 1.05, m(72)); hit.userData.lr = {door: true}; doorG.add(hit); pickables.push(hit);
+  // oak frame (batente) on both faces
+  for (const x of [1603, 1637]){
+    place([x - 2, 1286, x + 2, 1294], 'S', (g, w, d) => B(g, w, 2.14, d, M.oakV));
+    place([x - 2, 1436, x + 2, 1444], 'S', (g, w, d) => B(g, w, 2.14, d, M.oakV));
+    place([x - 2, 1286, x + 2, 1444], 'S', (g, w, d) => B(g, w, .05, d, M.oakV, 0, 2.1, 0));
+  }
+}
+// hall: walls, floor, ceiling, lift with floor indicator, project sign
+const HALL = [1635, 1180, 1955, 1600];
+[[1955,1160,1975,1620],[1635,1160,1975,1180],[1635,1600,1975,1620]].forEach(r => block(r, 0, H, wallMat, wallTop, {collide: true}));
+{
+  const hf = new THREE.Mesh(new THREE.PlaneGeometry(m(340), m(460)), std(0xd6ccbb, .35));
+  hf.rotation.x = -Math.PI/2; hf.position.set(m(1805), .004, m(1390)); hf.receiveShadow = true; apt.add(hf);
+  const hc = block([1635,1160,1975,1620], H, H + .12, wallMat, wallTop); walkOnly.add(hc);
+  // travertine on the lift wall, stainless doors with a centre seam, call button, floor number
+  place([1949,1180,1955,1600], 'W', (g, w, d) => B(g, w, H - .01, d, M.trav));
+  place([1943,1285,1949,1445], 'W', (g, w, d) => {
+    B(g, w + .06, 2.2, d, M.steel, 0, 0, 0);
+    B(g, w - .04, 2.1, .01, std(0xb9bec3, .22, {metalness: .9, envMap: envTex, envMapIntensity: .8}), 0, 0, d/2 + .005);
+    B(g, .006, 2.1, .012, M.screen, 0, 0, d/2 + .01);
+    const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d');
+    x.fillStyle = '#0d0e10'; x.fillRect(0, 0, 128, 64); x.fillStyle = '#ffb35c'; x.font = '700 40px Figtree, system-ui'; x.textAlign = 'center'; x.fillText('▲ 6', 64, 46);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const ind = new THREE.Mesh(new THREE.PlaneGeometry(.26, .13), new THREE.MeshStandardMaterial({map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .9}));
+    ind.position.set(0, 2.32, d/2 + .01); g.add(ind);
+  });
+  place([1946,1460,1949,1490], 'W', (g, w, d) => { B(g, w, .2, d, M.steel, 0, 1.0, 0);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .01, 16), new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x7fc4ff, emissiveIntensity: .8})); b.rotation.x = Math.PI/2; b.position.set(0, 1.1, d/2 + .006); g.add(b); });
+  // unit sign beside the door, door mat
+  place([1635,1446,1639,1530], 'E', (g, w, d) => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d');
+    x.fillStyle = '#b8925a'; x.fillRect(0, 0, 256, 128); x.fillStyle = '#2b2116'; x.textAlign = 'center';
+    x.font = '500 54px "Bodoni Moda", Georgia, serif'; x.fillText('Senses', 128, 64); x.font = '600 24px Figtree, system-ui'; x.fillText('6º ANDAR · TIPO 70', 128, 102);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(.36, .18), new THREE.MeshStandardMaterial({map: t, roughness: .35, metalness: .4})); sg.position.set(0, 1.45, d/2 + .002); g.add(sg);
+  });
+  place([1645,1310,1700,1425], 'S', (g, w, d) => RB(g, w, .012, d, .004, std(0x4a4038, 1), 0, 0, 0));
+}
+const entryG = new THREE.Group(); scene.add(entryG);
+entryG.add(label('Entrada', m(1795), H + .6, m(1365), .2));
+{ // arrow on the floor from the hall into the living, plan view only
+  const sh = new THREE.Shape([new THREE.Vector2(0, -.18), new THREE.Vector2(.5, -.18), new THREE.Vector2(.5, -.38), new THREE.Vector2(.9, 0), new THREE.Vector2(.5, .38), new THREE.Vector2(.5, .18), new THREE.Vector2(0, .18)]);
+  const ar = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({color: 0xd39a6a, side: THREE.DoubleSide}));
+  ar.rotation.x = -Math.PI/2; ar.rotation.z = Math.PI; ar.position.set(m(1760), .03, m(1365)); entryG.add(ar);
+}
+
 // surroundings: the apartment sits on an upper floor of a city block
 const GROUND_Y = -19;
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({color:0x8b8f78, roughness:1}));
@@ -708,7 +768,7 @@ for (let i = 0; i < 260; i++){
 scene.add(city);
 // ---------- the tower: graphite and glass, white slab bands, stacked balconies, lit crown (after the developer's facade render) ----------
 const FH = 2.9, LOBBY = 4.5, FLOORS_UP = 15, TOP = FH + FLOORS_UP*FH;      // our unit is on the 6th floor (y 0 → 2.9)
-const TX0 = m(295) - .06, TX1 = m(1635) + .06, TZ0 = m(157) - .06, TZ1 = m(1655) + 9.0; // the neighbour unit sits south of the kitchen
+const TX0 = m(295) - .06, TX1 = m(1975) + .06, TZ0 = m(157) - .06, TZ1 = m(1655) + 9.0; // the neighbour unit sits south of the kitchen
 const TW = TX1 - TX0, TD = TZ1 - TZ0, TCX = (TX0 + TX1)/2, TCZ = (TZ0 + TZ1)/2;
 let crownLED, lobbyGlass;
 const towerBelow = new THREE.Group(), towerUpper = new THREE.Group(), towerShell = new THREE.Group();
@@ -1315,7 +1375,7 @@ function setMode(mode){
   const walk = mode === 'walk', fac = mode === 'facade';
   controls.enabled = !walk;
   ceiling.visible = walk; pendants.visible = walk; ceilFx.visible = walk; switchesG.visible = walk; walkOnly.visible = walk;
-  apt.visible = !fac; towerShell.visible = fac; labelsG.visible = fac; towerUpper.visible = walk || fac;
+  apt.visible = !fac; towerShell.visible = fac; labelsG.visible = fac; entryG.visible = mode === 'plan'; towerUpper.visible = walk || fac;
   stick.hidden = !(walk && coarse); document.getElementById('lights').hidden = !walk; mini.hidden = !walk;
   document.getElementById('cross').hidden = true; tip.hidden = true;
   if (!walk && document.pointerLockElement) document.exitPointerLock();
@@ -1363,6 +1423,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Escape' && !gal.hidden){ gal.hidden = true; return; }
   if (current.mode !== 'walk' || e.repeat) return;
   if (e.code === 'KeyE'){ const r = hoverLR || lrFor(roomAt(player.x, player.z)); if (r) toggleRoom(r); }
+  if (e.code === 'KeyF') doorOpen = !doorOpen;
   if (e.code === 'KeyL'){ const r = lrFor(roomAt(player.x, player.z)); if (r) toggleRoom(r); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1404,7 +1465,7 @@ function pickLight(pos){
   for (const h of hits){ if (h.object.userData.sw && h.distance > 3.2) continue; return h.object.userData.lr; }
   return null;
 }
-function toggleRoom(r){ r.on = !r.on; lastLabel = ''; }
+function toggleRoom(r){ if (r.door){ doorOpen = !doorOpen; return; } r.on = !r.on; lastLabel = ''; }
 let lastLabel = '';
 
 // double-click / double-tap the floor in plan view to walk there
@@ -1442,7 +1503,9 @@ function moveJoy(e){
 function blocked(x, z){
   const px = x*S, pz = z*S, rr = R*S;
   for (const c of colliders) if (px > c[0]-rr && px < c[2]+rr && pz > c[1]-rr && pz < c[3]+rr) return true;
-  return px < 322 || px > 1605 || pz < 185 || pz > 1630;
+  if (!doorOpen && px > 1605 - rr && px < 1635 + rr && pz > 1290 - rr && pz < 1440 + rr) return true;
+  if (px > 1605) return !(px < 1955 - rr && pz > 1180 + rr && pz < 1600 - rr && (px > 1635 + rr || (pz > 1290 + rr && pz < 1440 - rr)));
+  return px < 322 || pz < 185 || pz > 1630;
 }
 function roomAt(x, z){
   const px = x*S, pz = z*S;
@@ -1471,7 +1534,7 @@ function step(dt){
   const label = room ? `<b>${room.n}</b> · ${room.d}` + (lr ? ` · luz ${lr.on ? 'acesa' : 'apagada'}` : '') : 'Apartamento';
   if (label !== lastLabel){ lastLabel = label; roomEl.innerHTML = label; }
   hoverLR = locked() ? pickLight(null) : (ptr.has && ptr.type === 'mouse' ? pickLight([ptr.x, ptr.y]) : null);
-  tip.hidden = !hoverLR; if (hoverLR) tip.textContent = `${hoverLR.on ? 'Apagar' : 'Acender'} a luz · ${hoverLR.id}`;
+  tip.hidden = !hoverLR; if (hoverLR) tip.textContent = hoverLR.door ? `${doorOpen ? 'Fechar' : 'Abrir'} a porta de entrada` : `${hoverLR.on ? 'Apagar' : 'Acender'} a luz · ${hoverLR.id}`;
   canvas.style.cursor = hoverLR ? 'pointer' : '';
   drawMini();
 }
@@ -1511,6 +1574,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), .05);
   if (current.mode === 'walk') step(dt); else controls.update();
   updateLights(dt); sky.position.copy(camera.position);
+  doorG.rotation.y += ((doorOpen ? -1.45 : 0) - doorG.rotation.y) * Math.min(1, dt*5);
   renderer.render(scene, camera);
 });
 const loading = document.getElementById('loading');
