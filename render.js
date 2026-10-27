@@ -33,6 +33,18 @@ export async function init(ctx){
   setLight(ctx.light || 'manha'); setMode('walk');
   LR.forEach(r => { r.on = true; r.v = 1; }); for (let i = 0; i < 30; i++) updateLights(.1);
   sky.visible = false; scene.fog = null; if (ctx.doorG) ctx.doorG.rotation.y = -1.45;
+  // the tracer assigns one material per mesh: split multi-material meshes (walls/ceilings) into one mesh per group
+  { const multi = []; scene.traverse(o => { if (o.isMesh && Array.isArray(o.material)) multi.push(o); });
+    for (const o of multi) {
+      const g0 = o.geometry.index ? o.geometry : null; if (!g0) { o.material = o.material[0]; continue; }
+      for (const gr of o.geometry.groups) {
+        const mt = o.material[gr.materialIndex]; if (!mt || mt.visible === false) continue;
+        const g = o.geometry.clone(); g.clearGroups(); g.setIndex(Array.from(o.geometry.index.array.slice(gr.start, gr.start + gr.count)));
+        const part = new THREE.Mesh(g, mt); part.position.copy(o.position); part.quaternion.copy(o.quaternion); part.scale.copy(o.scale);
+        part.visible = o.visible; o.parent.add(part);
+      }
+      o.visible = false; o.material = o.material[0];
+    } }
   const swaps = [];
   scene.traverse(o => {
     if (!o.isMesh) return;
