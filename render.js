@@ -20,11 +20,11 @@ export async function init(ctx){
     cozinha:  {n: 'Cozinha',            x: 1230, z: 1460, room: 'Gourmet e jantar', yaw: Math.PI/2},
     jantar:   {n: 'Jantar e gourmet',   x: 900,  z: 1470, room: 'Gourmet e jantar', yaw: -Math.PI/2},
     varanda:  {n: 'Gourmet · janelas',  x: 400,  z: 1210, room: 'Gourmet e jantar', yaw: 0},
-    servico:  {n: 'Área de serviço',    x: 640,  z: 1085, room: 'Área de serviço', yaw: 0},
+    servico:  {n: 'Área de serviço',    x: 760,  z: 1085, room: 'Área de serviço', yaw: 0},
     circ:     {n: 'Circulação',         x: 1100, z: 760,  room: 'Circulação', yaw: 0},
     suite:    {n: 'Suíte',              x: 760,  z: 590,  room: 'Suíte', yaw: .35},
     banhoS:   {n: 'Banho da suíte',     x: 430,  z: 790,  room: 'Banho suíte', yaw: 0},
-    quarto:   {n: 'Quarto',             x: 1290, z: 610,  room: 'Quarto', yaw: -.2},
+    quarto:   {n: 'Quarto',             x: 1400, z: 600,  room: 'Quarto', yaw: -.2},
     banho:    {n: 'Banho social',       x: 1100, z: 470,  room: 'Banho social', yaw: 0},
   };
   const CAM_Y = 1.45;
