@@ -37,6 +37,7 @@ export async function init(ctx){
   scene.traverse(o => {
     if (!o.isMesh) return;
     o.geometry = o.geometry.clone();          // the tracer caches material ids on the geometry: never share it
+    if (!Array.isArray(o.material)) o.geometry.clearGroups();   // single-material boxes/cylinders keep groups that shift the tracer's material ids
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     if (mats.every(mt => mt.visible === false)) { o.visible = false; return; }
     if (o.material.isShaderMaterial) { o.visible = false; return; }
@@ -51,7 +52,7 @@ export async function init(ctx){
     const gs = [], mt = new THREE.Matrix4();
     for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, mt); const g = im.geometry.clone(); g.applyMatrix4(mt); gs.push(g); }
     if (!gs.length) { im.visible = false; continue; }
-    const mesh = new THREE.Mesh(mergeGeometries(gs.map(g => g.index ? g : g), false), im.material);
+    gs.forEach(g => g.clearGroups()); const mesh = new THREE.Mesh(mergeGeometries(gs, false), im.material);
     mesh.position.copy(im.position); mesh.quaternion.copy(im.quaternion); mesh.scale.copy(im.scale);
     mesh.visible = im.visible; im.parent.add(mesh); im.visible = false;
   }
