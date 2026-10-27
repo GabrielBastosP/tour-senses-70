@@ -98,6 +98,9 @@ export async function init(ctx){
     t.mapping = THREE.EquirectangularReflectionMapping; t.minFilter = t.magFilter = THREE.LinearFilter; t.needsUpdate = true; return t;
   }
   const env = skyTex(ctx.light || 'manha'); scene.environment = env; scene.background = env;
+  // softer, more neutral lamp light for daytime stills (the raster tour exaggerates it to read through the ambient)
+  scene.traverse(o => { if (o.isPointLight && o.intensity > 0) { o.intensity *= .4; o.color.set(0xffe2c0); } });
+  renderer.toneMappingExposure = ctx.exposure ?? .95;
 
   // three r160 lacks these (added in r162); the path tracer reads them
   for (const k of ['backgroundRotation', 'environmentRotation']) if (!(k in THREE.Scene.prototype)) THREE.Scene.prototype[k] = new THREE.Euler();
